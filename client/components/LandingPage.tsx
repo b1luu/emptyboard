@@ -6,25 +6,6 @@ type Props = {
 export function LandingPage({ onStartNow, onStartCustom }: Props) {
   return (
     <main className="relative mx-auto flex min-h-[88vh] w-full max-w-6xl items-center px-4 py-8 md:px-8">
-      {/* Left doodle – rotation on wrapper, float on img so transforms don't fight */}
-      <div className="pointer-events-none absolute -left-10 top-6 hidden rotate-[-8deg] md:block">
-        <img
-          src="/images/doodle-cat-faces.png"
-          alt=""
-          className="w-52 opacity-35 animate-float-a"
-          style={{ animationDelay: "0.4s" }}
-        />
-      </div>
-
-      {/* Right doodle / cat mascot – bounce in, then gentle float */}
-      <div className="pointer-events-none absolute -right-8 bottom-0 hidden rotate-[4deg] md:block">
-        <img
-          src="/images/doodle-cat-sign.png"
-          alt=""
-          className="w-56 opacity-35 animate-bounce-then-float"
-        />
-      </div>
-
       <div className="w-full rounded-[2rem] border border-black bg-white p-8 text-black shadow-[8px_8px_0_0_rgba(0,0,0,0.9)] md:p-10">
         <p
           className="animate-slide-up-fade text-xs font-semibold uppercase tracking-[0.2em] text-black/70"
@@ -73,7 +54,7 @@ export function LandingPage({ onStartNow, onStartCustom }: Props) {
         >
           <span className="rounded-full border border-black/20 px-3 py-1">Minimal mode</span>
           <span className="rounded-full border border-black/20 px-3 py-1">Deterministic results</span>
-          <span className="rounded-full border border-black/20 px-3 py-1">Whiteboard doodle theme</span>
+          <span className="rounded-full border border-black/20 px-3 py-1">Grid notebook theme</span>
         </div>
       </div>
     </main>

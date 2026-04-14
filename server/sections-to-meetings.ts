@@ -2,7 +2,7 @@ import type { Meeting } from "./meeting-model";
 import type { SectionRow } from "./types";
 import { parseDaysColumn, parseTimeRange } from "./time-util";
 
-const SKIP_BUILDING = /\b(tba|tbd|online|remote|zoom|web)\b/i;
+const SKIP_BUILDING = /\b(tba|tbd|online|remote|zoom|web|rclas)\b/i;
 const SKIP_ROOM = /\b(tba|tbd|remote|online)\b/i;
 
 export function sectionsToMeetings(rows: SectionRow[]): Meeting[] {

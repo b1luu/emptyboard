@@ -4,13 +4,19 @@ import { TimelineStrip } from "./TimelineStrip";
 type Props = {
   room: RoomRecommendation;
   index?: number;
+  highlighted?: boolean;
 };
 
-export function RoomCard({ room, index = 0 }: Props) {
+export function RoomCard({ room, index = 0, highlighted = false }: Props) {
   return (
     <article
-      className={`animate-fade-in-up rounded-2xl border p-4 shadow-soft ${
-        room.isBest ? "border-cyan-400/60 bg-cyan-50" : "border-slate-200 bg-white"
+      id={`room-card-${room.roomId}`}
+      className={`animate-fade-in-up rounded-2xl border p-4 shadow-soft transition ${
+        highlighted
+          ? "border-cyan-500 bg-cyan-50 ring-2 ring-cyan-200"
+          : room.isBest
+            ? "border-cyan-400/60 bg-cyan-50"
+            : "border-slate-200 bg-white"
       }`}
       style={{ animationDelay: `${index * 60}ms` }}
     >
