@@ -31,14 +31,16 @@ export function BuildingPanel({ rooms, selectedBuilding, onSelectBuilding }: Pro
   const buildings = groupByBuilding(rooms);
   const selected = buildings.find((b) => b.building === selectedBuilding);
   return (
-    <aside className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 shadow-soft">
-      <h3 className="text-sm font-semibold text-slate-100">Building view</h3>
+    <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+      <h3 className="text-sm font-semibold text-slate-800">Building view</h3>
       <p className="mt-1 text-xs text-slate-400">Tap a building to focus recommendations.</p>
       <div className="mt-3 grid gap-2">
         <button
           onClick={() => onSelectBuilding("")}
-          className={`rounded-xl border px-3 py-2 text-left text-sm ${
-            selectedBuilding ? "border-slate-700 text-slate-300" : "border-cyan-400 bg-cyan-500/10 text-cyan-200"
+          className={`rounded-xl border px-3 py-2 text-left text-sm transition-all duration-200 ${
+            selectedBuilding
+              ? "border-slate-200 text-slate-600 hover:border-slate-300"
+              : "border-cyan-400 bg-cyan-50 text-cyan-700"
           }`}
         >
           All buildings
@@ -47,10 +49,10 @@ export function BuildingPanel({ rooms, selectedBuilding, onSelectBuilding }: Pro
           <button
             key={b.building}
             onClick={() => onSelectBuilding(b.building)}
-            className={`rounded-xl border px-3 py-2 text-left text-sm ${
+            className={`rounded-xl border px-3 py-2 text-left text-sm transition-all duration-200 ${
               selectedBuilding === b.building
-                ? "border-cyan-400 bg-cyan-500/10 text-cyan-200"
-                : "border-slate-700 text-slate-300 hover:border-slate-600"
+                ? "border-cyan-400 bg-cyan-50 text-cyan-700"
+                : "border-slate-200 text-slate-600 hover:border-slate-300"
             }`}
           >
             <div className="font-medium">{b.building}</div>
@@ -58,7 +60,7 @@ export function BuildingPanel({ rooms, selectedBuilding, onSelectBuilding }: Pro
           </button>
         ))}
       </div>
-      <div className="mt-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-300">
+      <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
         {selected ? (
           <>
             <div>{selected.freeCount} rooms free now</div>

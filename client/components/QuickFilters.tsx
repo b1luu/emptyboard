@@ -24,10 +24,10 @@ export function QuickFilters({ active, onToggle, showAdvanced, onToggleAdvanced 
           <button
             key={chip.id}
             onClick={() => onToggle(chip.id)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
               active.has(chip.id)
-                ? "border-cyan-400 bg-cyan-500/15 text-cyan-200"
-                : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-600"
+                ? "border-cyan-400 bg-cyan-50 text-cyan-700 shadow-sm scale-[1.04]"
+                : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
             }`}
           >
             {chip.label}
@@ -35,7 +35,11 @@ export function QuickFilters({ active, onToggle, showAdvanced, onToggleAdvanced 
         ))}
         <button
           onClick={onToggleAdvanced}
-          className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-600"
+          className={`rounded-full border px-3 py-1.5 text-xs transition-all duration-200 ${
+            showAdvanced
+              ? "border-slate-400 bg-slate-100 text-slate-700"
+              : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+          }`}
         >
           {showAdvanced ? "Hide advanced" : "Advanced filters"}
         </button>

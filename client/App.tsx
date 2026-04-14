@@ -154,7 +154,7 @@ export function App() {
   };
 
   return (
-    <div className={hasEnteredListView ? "pb-10" : "min-h-screen bg-[#f4f4f4]"}>
+    <div className={hasEnteredListView ? "min-h-screen bg-[#f4f4f4] pb-10" : "min-h-screen bg-[#f4f4f4]"}>
       {!hasEnteredListView ? (
         <LandingPage onStartNow={enterNow} onStartCustom={enterCustom} />
       ) : (
@@ -194,18 +194,18 @@ export function App() {
 
       <main className="mx-auto mt-4 grid w-full max-w-7xl gap-4 px-4 md:grid-cols-12 md:px-6">
         <section className="space-y-3 md:col-span-7 lg:col-span-8">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4 text-sm text-slate-300 shadow-soft">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-600 shadow-soft">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span>{loading ? "Refreshing recommendations..." : `${recommendations.length} recommendations`}</span>
-              {ms !== null ? <span className="rounded-full bg-slate-800 px-2 py-1 text-xs text-slate-300">~{ms.toFixed(0)} ms</span> : null}
+              {ms !== null ? <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500">~{ms.toFixed(0)} ms</span> : null}
             </div>
-            {err ? <p className="mt-2 text-rose-300">{err}</p> : null}
+            {err ? <p className="mt-2 text-rose-600">{err}</p> : null}
           </div>
-          {recommendations.map((r) => (
-            <RoomCard key={r.roomId} room={r} />
+          {recommendations.map((r, i) => (
+            <RoomCard key={r.roomId} room={r} index={i} />
           ))}
           {!loading && recommendations.length === 0 ? (
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-6 text-sm text-slate-300">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-sm text-slate-500">
               No room recommendations yet. Try removing filters or selecting a different building.
             </div>
           ) : null}
