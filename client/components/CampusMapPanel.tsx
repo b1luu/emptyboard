@@ -175,19 +175,22 @@ export function CampusMapPanel({ rooms, selectedBuilding, onSelectBuilding, onFo
   };
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3 shadow-soft">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-slate-100">Campus map (beta)</h3>
+    <section className="rounded-[1.75rem] border border-black bg-white p-4 shadow-[8px_8px_0_0_rgba(0,0,0,0.9)]">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-black/50">Campus map</p>
+          <h3 className="mt-1 text-lg font-semibold text-slate-900">Building clusters with room density.</h3>
+        </div>
         <button
           onClick={() => onSelectBuilding("")}
-          className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:border-slate-500"
+          className="rounded-xl border border-black bg-white px-3 py-2 text-xs font-semibold text-black transition hover:-translate-y-0.5 hover:bg-black/5"
         >
           Clear
         </button>
       </div>
 
       <div
-        className="relative h-[420px] overflow-hidden rounded-xl border border-slate-700"
+        className="relative h-[420px] overflow-hidden rounded-[1.5rem] border border-black bg-[#efe7d6]"
         style={{ cursor: dragging ? "grabbing" : "grab" }}
         onWheel={onWheel}
         onMouseDown={onMouseDown}
@@ -211,8 +214,8 @@ export function CampusMapPanel({ rooms, selectedBuilding, onSelectBuilding, onFo
                 top: `${geo.mapPosition.y}px`,
               }}
             />
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.11)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.11)_1px,transparent_1px)] bg-[size:28px_28px]" />
-            <div className="pointer-events-none absolute inset-0 bg-slate-950/20" />
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.07)_1px,transparent_1px)] bg-[size:28px_28px]" />
+            <div className="pointer-events-none absolute inset-0 bg-[#f4ecdd]/30" />
             {clusters.map((cluster) => {
               if (cluster.buildings.length === 1) {
                 const b = cluster.buildings[0]!;
@@ -223,8 +226,8 @@ export function CampusMapPanel({ rooms, selectedBuilding, onSelectBuilding, onFo
                     onClick={() => selectBuilding(b)}
                     className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border px-2 py-1 text-[11px] font-semibold transition ${
                       active
-                        ? "z-20 border-cyan-300 bg-cyan-400 text-slate-950"
-                        : "z-10 border-slate-600 bg-slate-950/90 text-slate-200 hover:border-cyan-400"
+                        ? "z-20 border-black bg-black text-white"
+                        : "z-10 border-black bg-white text-slate-900 hover:-translate-y-[55%]"
                     }`}
                     style={{ left: `${b.x}px`, top: `${b.y}px` }}
                     title={`${b.building}: ${b.freeCount} free`}
@@ -244,7 +247,7 @@ export function CampusMapPanel({ rooms, selectedBuilding, onSelectBuilding, onFo
                       y: p.y + (VIEW_H / 2 - cluster.y) * 0.2,
                     }));
                   }}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-300 bg-amber-200 px-2 py-1 text-[11px] font-semibold text-slate-900"
+                  className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-black bg-[#fff8df] px-2 py-1 text-[11px] font-semibold text-slate-900"
                   style={{ left: `${cluster.x}px`, top: `${cluster.y}px` }}
                   title={`${cluster.buildings.length} nearby buildings, ${count} rooms`}
                 >
@@ -256,16 +259,21 @@ export function CampusMapPanel({ rooms, selectedBuilding, onSelectBuilding, onFo
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl border border-slate-800 bg-slate-950/70 p-3 text-xs text-slate-300">
+      <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto]">
+        <div className="rounded-[1.25rem] border border-black bg-[#fbfbfb] p-3 text-xs text-slate-600">
         {selected ? (
           <>
-            <div className="font-semibold text-slate-100">{selected.building}</div>
+            <div className="font-semibold text-slate-900">{selected.building}</div>
             <div>{selected.freeCount} rooms free now</div>
             <div>Best free window {fmtDuration(selected.bestWindowMin)}</div>
           </>
         ) : (
-          <div>Select a building marker to focus recommendations.</div>
+            <div>Select a building marker to focus recommendations.</div>
         )}
+        </div>
+        <div className="rounded-[1.25rem] border border-black bg-[#fbfbfb] px-4 py-3 text-xs text-slate-600">
+          Scroll to zoom. Drag to pan.
+        </div>
       </div>
     </section>
   );

@@ -14,35 +14,44 @@ type Props = {
   onToggle: (id: QuickChipId) => void;
   showAdvanced: boolean;
   onToggleAdvanced: () => void;
+  embedded?: boolean;
 };
 
-export function QuickFilters({ active, onToggle, showAdvanced, onToggleAdvanced }: Props) {
+export function QuickFilters({ active, onToggle, showAdvanced, onToggleAdvanced, embedded = false }: Props) {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pt-3 md:px-6">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className={embedded ? "w-full" : "mx-auto w-full max-w-7xl px-4 pt-4 md:px-6"}>
+      <div className={embedded ? "rounded-[1.25rem] border border-black bg-[#fbfbfb] p-4" : "rounded-[1.5rem] border border-black bg-white p-4 shadow-[6px_6px_0_0_rgba(0,0,0,0.85)]"}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-black/50">Quick picks</p>
+            <p className="mt-1 text-sm text-black/65">Fast constraints for the results below.</p>
+          </div>
+          <button
+            onClick={onToggleAdvanced}
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
+              showAdvanced
+                ? "border-black bg-black text-white"
+                : "border-black bg-white text-black hover:-translate-y-0.5 hover:bg-black/5"
+            }`}
+          >
+            {showAdvanced ? "Hide advanced" : "Advanced filters"}
+          </button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
         {chips.map((chip) => (
           <button
             key={chip.id}
             onClick={() => onToggle(chip.id)}
-            className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 ${
               active.has(chip.id)
-                ? "border-cyan-400 bg-cyan-50 text-cyan-700 shadow-sm scale-[1.04]"
-                : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+                ? "border-black bg-black text-white shadow-sm"
+                : "border-black/20 bg-[#f8f8f8] text-black/70 hover:-translate-y-0.5 hover:border-black hover:bg-white"
             }`}
           >
             {chip.label}
           </button>
         ))}
-        <button
-          onClick={onToggleAdvanced}
-          className={`rounded-full border px-3 py-1.5 text-xs transition-all duration-200 ${
-            showAdvanced
-              ? "border-slate-400 bg-slate-100 text-slate-700"
-              : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-50"
-          }`}
-        >
-          {showAdvanced ? "Hide advanced" : "Advanced filters"}
-        </button>
+        </div>
       </div>
     </div>
   );
