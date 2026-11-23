@@ -45,6 +45,26 @@ export interface SocClient {
   fetchSubjectResultPage(page: number, cookie: string): Promise<string>;
 }
 
+/**
+ * Course-level checkboxes covering the full UCSD Schedule of Classes catalog:
+ * 1-99 (1), 87&90s (11), 99s (12), 100-198 (2), 195s (4), 199s (5),
+ * 200-297 (3), 298s (7), 299s (8), 300+ (13), 400+ (10), 500+ (9).
+ */
+const ALL_SCHED_OPTIONS = [
+  "schedOption1",
+  "schedOption11",
+  "schedOption12",
+  "schedOption2",
+  "schedOption4",
+  "schedOption5",
+  "schedOption3",
+  "schedOption7",
+  "schedOption8",
+  "schedOption13",
+  "schedOption10",
+  "schedOption9",
+] as const;
+
 /** Minimal POST body matching the public "by subject" (tabs-sub) search form. */
 export function subjectSearchBody(term: string, subjectCode: string): string {
   const params = new URLSearchParams();
@@ -52,10 +72,10 @@ export function subjectSearchBody(term: string, subjectCode: string): string {
   params.set("tabNum", "tabs-sub");
   params.set("selectedSubjects", `${subjectCode.trim()} `);
   params.set("_selectedSubjects", "1");
-  params.set("schedOption1", "true");
-  params.set("_schedOption1", "on");
-  params.set("schedOption2", "true");
-  params.set("_schedOption2", "on");
+  for (const opt of ALL_SCHED_OPTIONS) {
+    params.set(opt, "true");
+    params.set(`_${opt}`, "on");
+  }
   for (const d of ["M", "T", "W", "R", "F", "S"]) {
     params.append("schDay", d);
   }
