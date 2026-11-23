@@ -135,7 +135,8 @@ const DAY_QUERY_MAP: Record<string, DayCode> = {
 
 /** Parse API weekday query values (e.g. "Tu", "Tuesday", "R"). */
 export function parseDayQuery(input: string): DayCode | null {
-  return DAY_QUERY_MAP[input.trim().toLowerCase()] ?? null;
+  const key = input.trim().toLowerCase();
+  return Object.hasOwn(DAY_QUERY_MAP, key) ? DAY_QUERY_MAP[key]! : null;
 }
 
 export function formatMinutes(minutes: number): string {

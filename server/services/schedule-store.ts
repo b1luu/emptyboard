@@ -5,7 +5,7 @@ import type { DailyWindowConfig } from "../config";
 import type { LoadedTermData, RoomAvailabilityIndex, SectionRow } from "../types/schedule";
 import { buildRoomAvailabilityIndex } from "./availability";
 
-const TERM_CODE_RE = /^[A-Z0-9]{4}$/;
+const TERM_CODE_RE = /^[A-Z][A-Z0-9]\d{2}$/;
 
 export function normalizeTermCode(raw: string): string | null {
   const normalized = raw.trim().toUpperCase();
@@ -22,6 +22,8 @@ export type ScheduleStoreStats = {
   loadedTerms: string[];
   totalSections: number;
   totalRooms: number;
+  termCacheHits: number;
+  termCacheMisses: number;
 };
 
 export class ScheduleStore {
@@ -31,6 +33,8 @@ export class ScheduleStore {
   private readonly termCache = new Map<string, CachedTermEntry>();
   private readonly indexCache = new Map<string, RoomAvailabilityIndex>();
   private readonly inFlightLoads = new Map<string, Promise<LoadedTermData | null>>();
+  private termCacheHits = 0;
+  private termCacheMisses = 0;
 
   constructor(opts: {
     dataDir: string;
@@ -56,6 +60,7 @@ export class ScheduleStore {
 
     const cached = this.termCache.get(normalized);
     if (cached && Date.now() - cached.checkedAt < this.statCheckIntervalMs) {
+      this.termCacheHits += 1;
       return Promise.resolve(cached.data);
     }
 
@@ -79,6 +84,7 @@ export class ScheduleStore {
       fileSize = info.size;
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        this.termCacheMisses += 1;
         this.termCache.delete(normalized);
         this.indexCache.delete(normalized);
         return null;
@@ -88,10 +94,12 @@ export class ScheduleStore {
 
     const cached = this.termCache.get(normalized);
     if (cached && cached.data.loadedAt === mtimeMs && cached.fileSize === fileSize) {
+      this.termCacheHits += 1;
       cached.checkedAt = Date.now();
       return cached.data;
     }
 
+    this.termCacheMisses += 1;
     const raw = await readFile(filePath, "utf-8");
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
@@ -208,6 +216,12 @@ export class ScheduleStore {
       totalRooms += this.indexCache.get(term)?.roomCount ?? 0;
     }
 
-    return { loadedTerms, totalSections, totalRooms };
+    return {
+      loadedTerms,
+      totalSections,
+      totalRooms,
+      termCacheHits: this.termCacheHits,
+      termCacheMisses: this.termCacheMisses,
+    };
   }
 }

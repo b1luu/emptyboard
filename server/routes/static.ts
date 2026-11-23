@@ -1,6 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, resolve, sep } from "node:path";
-import type { Hono } from "hono";
+import type { Env, Hono } from "hono";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -27,7 +27,7 @@ async function safeStat(filePath: string) {
   }
 }
 
-export function registerStaticRoutes(app: Hono, clientDistDir: string): void {
+export function registerStaticRoutes<E extends Env>(app: Hono<E>, clientDistDir: string): void {
   const distRoot = resolve(clientDistDir);
   const distPrefix = distRoot.endsWith(sep) ? distRoot : `${distRoot}${sep}`;
   const indexHtmlPath = join(distRoot, "index.html");

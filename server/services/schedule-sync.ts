@@ -5,6 +5,13 @@ import { normalizeTermCode, type ScheduleStore } from "./schedule-store";
 
 const SUBJECT_CODE_RE = /^[A-Z]{2,6}$/;
 
+export class ScheduleSyncError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = "ScheduleSyncError";
+  }
+}
+
 export type SyncTermOptions = {
   subjects?: string[];
   concurrency?: number;
@@ -236,7 +243,7 @@ export class ScheduleSyncService {
     }
 
     if (subjects.length === 0) {
-      throw new Error(`No subjects found for term ${term}`);
+      throw new ScheduleSyncError(`No subjects found for term ${term}`);
     }
 
     const concurrency = Math.min(8, Math.max(1, opts.concurrency ?? this.defaultConcurrency));
@@ -272,7 +279,7 @@ export class ScheduleSyncService {
     const existing = await this.store.loadTerm(term).catch(() => null);
 
     if (succeededSubjects.size === 0) {
-      throw new Error(
+      throw new ScheduleSyncError(
         `Sync for ${term} failed for all ${subjects.length} subjects; existing cache preserved`
       );
     }
@@ -283,7 +290,7 @@ export class ScheduleSyncService {
       existing.sections.length > 0 &&
       failedSubjects.length > subjects.length / 2
     ) {
-      throw new Error(
+      throw new ScheduleSyncError(
         `Sync for ${term} aborted (${failedSubjects.length}/${subjects.length} subjects failed); existing cache preserved`
       );
     }
@@ -307,7 +314,7 @@ export class ScheduleSyncService {
     }
 
     if (finalSections.length === 0) {
-      throw new Error(
+      throw new ScheduleSyncError(
         `Sync for ${term} produced 0 sections (${failedSubjects.length}/${subjects.length} subjects failed); existing cache preserved`
       );
     }
