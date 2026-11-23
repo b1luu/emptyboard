@@ -50,12 +50,20 @@ export function notFound(message: string, details?: ErrorDetails): ApiError {
   return new ApiError(404, "NOT_FOUND", message, details);
 }
 
-export function upstreamError(message: string, details?: ErrorDetails): ApiError {
-  return new ApiError(502, "UPSTREAM_ERROR", message, details);
+export function upstreamError(
+  message: string,
+  details?: ErrorDetails,
+  options?: ErrorOptions
+): ApiError {
+  return new ApiError(502, "UPSTREAM_ERROR", message, details, options);
 }
 
-export function internalError(message = "An unexpected internal error occurred"): ApiError {
-  return new ApiError(500, "INTERNAL_ERROR", message);
+export function internalError(
+  message = "An unexpected internal error occurred",
+  details?: ErrorDetails,
+  options?: ErrorOptions
+): ApiError {
+  return new ApiError(500, "INTERNAL_ERROR", message, details, options);
 }
 
 export function formatErrorEnvelope(err: ApiError, requestId: string | null): ErrorEnvelope {
