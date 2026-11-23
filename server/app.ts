@@ -8,6 +8,12 @@ import {
   notFound,
   upstreamError,
 } from "./errors";
+import {
+  createRequestLogger,
+  defaultLogSink,
+  logServerError,
+  type LogSink,
+} from "./middleware/logger";
 import { createRoomsRoutes } from "./routes/rooms";
 import { createScheduleRoutes } from "./routes/schedule";
 import { registerStaticRoutes } from "./routes/static";
@@ -27,6 +33,7 @@ export type AppDependencies = {
   socClient?: SocClient;
   store?: ScheduleStore;
   syncService?: ScheduleSyncService;
+  logSink?: LogSink;
 };
 
 export type EmptyBoardApp = {
@@ -42,6 +49,7 @@ function isApiPath(pathname: string): boolean {
 
 export function createApp(deps: AppDependencies = {}): EmptyBoardApp {
   const config = deps.config ?? loadConfig();
+  const logSink = deps.logSink ?? defaultLogSink;
   const socClient =
     deps.socClient ??
     createSocClient({
@@ -65,24 +73,46 @@ export function createApp(deps: AppDependencies = {}): EmptyBoardApp {
 
   const app = new Hono<AppEnv>();
 
+  const requestLogger = createRequestLogger({
+    level: config.logLevel,
+    sink: logSink,
+  });
+
+  // Register structured request logging before CORS, scoped to API paths only.
+  app.use("/api/*", requestLogger);
+
   app.use("/api/*", cors());
 
   app.onError((err, c) => {
     const requestId = c.get("requestId") ?? null;
+    const pathname = new URL(c.req.url).pathname;
 
+    let mapped: ApiError;
     if (err instanceof ApiError) {
-      return c.json(formatErrorEnvelope(err, requestId), err.status);
-    }
-
-    if (err instanceof UpstreamSocError) {
-      const mapped = upstreamError(
+      mapped = err;
+    } else if (err instanceof UpstreamSocError) {
+      mapped = upstreamError(
         "Upstream UCSD schedule service is currently unavailable",
-        err.status !== undefined ? { upstreamStatus: err.status } : undefined
+        err.status !== undefined ? { upstreamStatus: err.status } : undefined,
+        { cause: err }
       );
-      return c.json(formatErrorEnvelope(mapped, requestId), mapped.status);
+    } else {
+      mapped = internalError();
     }
 
-    const mapped = internalError();
+    if (mapped.status >= 500) {
+      logServerError(
+        { level: config.logLevel, sink: logSink },
+        {
+          requestId,
+          method: c.req.method,
+          path: pathname,
+          status: mapped.status,
+          err,
+        }
+      );
+    }
+
     return c.json(formatErrorEnvelope(mapped, requestId), mapped.status);
   });
 
