@@ -36,9 +36,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
-
-      # Uncomment in Phase 3 once the test suite is added:
-      # - name: Test
-      #   run: npm test
