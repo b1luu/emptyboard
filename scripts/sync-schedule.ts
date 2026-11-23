@@ -1,117 +1,101 @@
 #!/usr/bin/env node
 /**
  * Downloads the public UCSD Schedule of Classes (by-subject / "tabs-sub" view)
- * for a term and writes a normalized JSON array for EmptyBoard to serve locally.
+ * for a term and atomically writes a normalized JSON array for EmptyBoard.
  *
  * Usage:
- *   bun run scripts/sync-schedule.ts --term=WI26
- *   bun run scripts/sync-schedule.ts --term=WI26 --subjects=CSE,MATH
- *   bun run scripts/sync-schedule.ts --list-terms
+ *   npm run sync -- --term=SP26
+ *   npm run sync -- --term=SP26 --subjects=CSE,MATH
+ *   npm run sync -- --list-terms
  */
 
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { parseTotalResultPages } from "../server/pagination";
-import { parseScheduleHtml } from "../server/parse-soc";
-import {
-  fetchSubjectListJson,
-  fetchSubjectPage,
-  fetchSubjectPageN,
-  fetchTermsFromStudentPage,
-} from "../server/soc-fetch";
-import type { SectionRow } from "../server/types";
+import { loadConfig } from "../server/config";
+import { ScheduleStore, normalizeTermCode } from "../server/services/schedule-store";
+import { ScheduleSyncService, parseSubjectCodes } from "../server/services/schedule-sync";
+import { createSocClient } from "../server/soc/client";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, "..", "data");
-
-function arg(name: string): string | undefined {
-  const p = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return p?.split("=", 2)[1];
+function getArg(name: string): string | undefined {
+  const prefix = `--${name}=`;
+  const found = process.argv.find((a) => a.startsWith(prefix));
+  return found ? found.slice(prefix.length) : undefined;
 }
 
 function hasFlag(name: string): boolean {
   return process.argv.includes(`--${name}`);
 }
 
-async function fetchAllPagesForSubject(term: string, subjectCode: string): Promise<SectionRow[]> {
-  const first = await fetchSubjectPage(term, subjectCode, null);
-  const htmls: string[] = [first.html];
-  const total = parseTotalResultPages(first.html);
-  let cookie = first.cookie;
+async function main(): Promise<void> {
+  const config = loadConfig();
+  const socClient = createSocClient({
+    timeoutMs: config.socTimeoutMs,
+    maxRetries: config.socMaxRetries,
+  });
+  const store = new ScheduleStore({
+    dataDir: config.dataDir,
+    dailyWindow: config.dailyWindow,
+  });
+  const syncService = new ScheduleSyncService({
+    socClient,
+    store,
+    termsCacheTtlMs: config.termsCacheTtlMs,
+    defaultConcurrency: config.syncConcurrency,
+  });
 
-  for (let page = 2; page <= total; page++) {
-    const html = await fetchSubjectPageN(term, page, cookie);
-    htmls.push(html);
-  }
-
-  const merged: SectionRow[] = [];
-  const seen = new Set<string>();
-  for (const html of htmls) {
-    for (const row of parseScheduleHtml(html, term, subjectCode)) {
-      const k = `${row.sectionId}|${row.section}|${row.meetingType}|${row.days}|${row.time}|${row.instructor}`;
-      if (seen.has(k)) continue;
-      seen.add(k);
-      merged.push(row);
-    }
-  }
-  return merged;
-}
-
-async function main() {
   if (hasFlag("list-terms")) {
-    const terms = await fetchTermsFromStudentPage();
-    for (const t of terms) console.log(`${t.code}\t${t.label}`);
+    const { terms, source } = await syncService.getTerms();
+    console.error(`Loaded ${terms.length} terms (source: ${source})`);
+    for (const term of terms) {
+      console.log(`${term.code}\t${term.label}`);
+    }
     return;
   }
 
-  const termArg = arg("term");
-  if (!termArg) {
-    console.error("Usage: --term=WI26 [--subjects=CSE,MATH]");
+  const rawTerm = getArg("term");
+  if (!rawTerm) {
+    console.error("Usage: npm run sync -- --term=SP26 [--subjects=CSE,MATH] [--concurrency=6]");
     throw new Error("missing --term");
   }
-  const term = termArg;
 
-  let subjects: string[];
-  const subArg = arg("subjects");
-  if (subArg) {
-    subjects = subArg.split(",").map((s) => s.trim().toUpperCase());
-  } else {
-    const list = await fetchSubjectListJson(term);
-    subjects = list.map((s) => s.code.trim().toUpperCase());
+  const term = normalizeTermCode(rawTerm);
+  if (!term) {
+    throw new Error(`invalid --term "${rawTerm}" (expected 4 alphanumeric characters, e.g. SP26)`);
   }
 
-  await mkdir(DATA_DIR, { recursive: true });
-
-  const concurrency = Math.min(8, parseInt(arg("concurrency") ?? "6", 10));
-  const chunks: SectionRow[][] = Array.from({ length: subjects.length }, () => []);
-  let i = 0;
-
-  async function worker() {
-    while (i < subjects.length) {
-      const idx = i++;
-      const sub = subjects[idx];
-      if (sub === undefined) continue;
-      process.stderr.write(`\r[${idx + 1}/${subjects.length}] ${sub}   `);
-      try {
-        chunks[idx] = await fetchAllPagesForSubject(term, sub);
-      } catch (e) {
-        console.error(`\nfail ${sub}:`, e);
-        chunks[idx] = [];
-      }
+  const subjectsArg = getArg("subjects");
+  let subjects: string[] | undefined;
+  if (subjectsArg !== undefined) {
+    const parsed = parseSubjectCodes(subjectsArg);
+    if (!parsed.ok) {
+      throw new Error(`invalid --subjects: ${parsed.error}`);
     }
+    subjects = parsed.subjects;
   }
 
-  await Promise.all(Array.from({ length: concurrency }, () => worker()));
-  const out = chunks.flat();
-  console.error(`\ndone: ${out.length} section rows`);
+  const concurrencyArg = getArg("concurrency");
+  const parsedConcurrency = concurrencyArg ? Number.parseInt(concurrencyArg, 10) : undefined;
+  const concurrency =
+    parsedConcurrency !== undefined && Number.isFinite(parsedConcurrency)
+      ? Math.min(8, Math.max(1, parsedConcurrency))
+      : config.syncConcurrency;
 
-  const path = join(DATA_DIR, `${term}.json`);
-  await writeFile(path, JSON.stringify(out, null, 0), "utf-8");
-  console.log(path);
+  const summary = await syncService.syncTerm(term, {
+    subjects,
+    concurrency,
+    onProgress: (completed, total, subject) => {
+      process.stderr.write(`\r[${completed}/${total}] ${subject.padEnd(6)} `);
+    },
+  });
+
+  console.error(
+    `\ndone: ${summary.sectionCount} section rows across ${summary.subjectsSucceeded}/${summary.subjectsRequested} subjects in ${summary.durationMs}ms`
+  );
+  if (summary.failedSubjects.length > 0) {
+    console.error(`failed subjects (${summary.failedSubjects.length}): ${summary.failedSubjects.join(", ")}`);
+  }
+  console.log(summary.sourcePath);
 }
 
-main().catch((e) => {
-  console.error(e);
+main().catch((err) => {
+  console.error(err instanceof Error ? err.message : err);
   process.exit(1);
 });
