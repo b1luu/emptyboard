@@ -9,7 +9,11 @@
     "build": "vite build",
     "start": "tsx server/index.ts",
     "sync": "tsx scripts/sync-schedule.ts",
-    "typecheck": "tsc --noEmit"
+    "bench": "tsx scripts/benchmark.ts",
+    "bench:synthetic": "tsx scripts/benchmark.ts --synthetic",
+    "test": "node --import tsx --test \"tests/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
