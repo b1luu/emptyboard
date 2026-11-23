@@ -119,7 +119,7 @@ export function App() {
       const t0 = performance.now();
       const r = await fetch(u);
       const elapsed = performance.now() - t0;
-      if (!r.ok) throw new Error((await r.json().catch(() => ({ error: r.statusText }))).error);
+      if (!r.ok) { const body = await r.json().catch(() => null); throw new Error(body?.error?.message ?? r.statusText); }
       const data = (await r.json()) as SearchResponse;
       setMs(elapsed);
       setRooms(data.rooms);
