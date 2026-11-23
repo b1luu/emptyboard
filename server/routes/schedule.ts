@@ -1,8 +1,21 @@
 import { Hono } from "hono";
-import { normalizeTermCode, type ScheduleStore } from "../services/schedule-store";
-import { parseSubjectCodes, type ScheduleSyncService } from "../services/schedule-sync";
+import { ApiError, internalError, notFound, upstreamError } from "../errors";
+import type { ScheduleStore } from "../services/schedule-store";
+import { ScheduleSyncError, type ScheduleSyncService } from "../services/schedule-sync";
+import { UpstreamSocError } from "../soc/client";
+import { parseSubjectsQuery, parseTermCode } from "../validation";
 
 const MAX_SUBJECTS_PER_SYNC = 25;
+
+function isFilesystemError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof (err as NodeJS.ErrnoException).code === "string" &&
+    "syscall" in err
+  );
+}
 
 export function createScheduleRoutes(
   store: ScheduleStore,
@@ -11,23 +24,12 @@ export function createScheduleRoutes(
   const router = new Hono();
 
   router.get("/:term", async (c) => {
-    const term = normalizeTermCode(c.req.param("term"));
-    if (!term) {
-      return c.json({ error: "invalid term code (expected 4 alphanumeric chars, e.g. SP26)" }, 400);
-    }
+    const term = parseTermCode(c.req.param("term"), "term", "BAD_REQUEST");
 
-    const t0 = performance.now();
     const data = await store.loadTerm(term);
     if (!data) {
-      return c.json(
-        { error: `No local index for ${term}. Run: npm run sync -- --term=${term}` },
-        404
-      );
+      throw notFound(`No local index for ${term}. Run: npm run sync -- --term=${term}`, { term });
     }
-
-    const ms = performance.now() - t0;
-    c.header("X-Response-Time", `${ms.toFixed(2)}ms`);
-    c.header("Server-Timing", `schedule;dur=${ms.toFixed(1)}`);
 
     return c.json({
       term: data.term,
@@ -38,20 +40,8 @@ export function createScheduleRoutes(
   });
 
   router.post("/:term/sync", async (c) => {
-    const term = normalizeTermCode(c.req.param("term"));
-    if (!term) {
-      return c.json({ error: "invalid term code (expected 4 alphanumeric chars, e.g. SP26)" }, 400);
-    }
-
-    const subjectsQuery = c.req.query("subjects");
-    let subjects: string[] | undefined;
-    if (subjectsQuery !== undefined) {
-      const parsed = parseSubjectCodes(subjectsQuery, MAX_SUBJECTS_PER_SYNC);
-      if (!parsed.ok) {
-        return c.json({ error: parsed.error }, 400);
-      }
-      subjects = parsed.subjects;
-    }
+    const term = parseTermCode(c.req.param("term"), "term", "BAD_REQUEST");
+    const subjects = parseSubjectsQuery(c.req.query("subjects"), MAX_SUBJECTS_PER_SYNC);
 
     try {
       const summary = await syncService.syncTerm(term, { subjects });
@@ -65,15 +55,40 @@ export function createScheduleRoutes(
         durationMs: summary.durationMs,
       });
     } catch (err) {
-      const existing = await store.loadTerm(term).catch(() => null);
-      return c.json(
-        {
-          error: err instanceof Error ? err.message : String(err),
-          fallbackAvailable: existing !== null,
-          cachedSectionCount: existing?.sections.length ?? 0,
-        },
-        502
-      );
+      if (err instanceof ApiError) {
+        throw err;
+      }
+
+      if (err instanceof UpstreamSocError || err instanceof ScheduleSyncError) {
+        const existing = await store.loadTerm(term).catch(() => null);
+        throw upstreamError(
+          `Unable to sync schedule for ${term}`,
+          {
+            term,
+            ...(err instanceof UpstreamSocError && err.status !== undefined
+              ? { upstreamStatus: err.status }
+              : {}),
+            fallbackAvailable: existing !== null,
+            cachedSectionCount: existing?.sections.length ?? 0,
+          },
+          { cause: err }
+        );
+      }
+
+      if (isFilesystemError(err)) {
+        const existing = await store.loadTerm(term).catch(() => null);
+        throw internalError(
+          "Unable to persist synced schedule",
+          {
+            term,
+            fallbackAvailable: existing !== null,
+            cachedSectionCount: existing?.sections.length ?? 0,
+          },
+          { cause: err }
+        );
+      }
+
+      throw err;
     }
   });
 
