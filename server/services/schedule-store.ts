@@ -5,7 +5,7 @@ import type { DailyWindowConfig } from "../config";
 import type { LoadedTermData, RoomAvailabilityIndex, SectionRow } from "../types/schedule";
 import { buildRoomAvailabilityIndex } from "./availability";
 
-const TERM_CODE_RE = /^[A-Z0-9]{4}$/;
+const TERM_CODE_RE = /^[A-Z][A-Z0-9]\d{2}$/;
 
 export function normalizeTermCode(raw: string): string | null {
   const normalized = raw.trim().toUpperCase();
