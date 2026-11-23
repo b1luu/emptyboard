@@ -14,6 +14,7 @@ import {
   logServerError,
   type LogSink,
 } from "./middleware/logger";
+import { createHealthHandler } from "./routes/health";
 import { createRoomsRoutes } from "./routes/rooms";
 import { createScheduleRoutes } from "./routes/schedule";
 import { registerStaticRoutes } from "./routes/static";
@@ -78,8 +79,9 @@ export function createApp(deps: AppDependencies = {}): EmptyBoardApp {
     sink: logSink,
   });
 
-  // Register structured request logging before CORS, scoped to API paths only.
+  // Register structured request logging before CORS, scoped to API and health paths only.
   app.use("/api/*", requestLogger);
+  app.use("/health", requestLogger);
 
   app.use("/api/*", cors());
 
@@ -126,9 +128,9 @@ export function createApp(deps: AppDependencies = {}): EmptyBoardApp {
     return c.text("Not Found", 404);
   });
 
-  app.get("/api/health", (c) =>
-    c.json({ ok: true, service: "emptyboard", mode: "room-availability" })
-  );
+  const healthHandler = createHealthHandler(config, store);
+  app.get("/health", healthHandler);
+  app.get("/api/health", healthHandler);
 
   app.route("/api/terms", createTermsRoutes(syncService));
   app.route("/api/schedule", createScheduleRoutes(store, syncService));
