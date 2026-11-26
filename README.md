@@ -173,9 +173,9 @@ npm run bench:synthetic
 ## Mutation testing
 
 - `npm run mutation` runs [Stryker](https://stryker-mutator.io/) (command runner, `node --import tsx --test`) over the core server logic: `time-window`, `availability`, `schedule-sync`, and the SOC `parser`.
-- A full run takes about 20 minutes on 2 cores; use `npx stryker run --mutate server/soc/parser.ts` for a single file.
-- The run fails if the mutation score drops below `thresholds.break` in `stryker.config.json`; raise it when tests improve, never lower it to get green.
-- Reports are written to `reports/mutation/` (git-ignored); CI uploads them as the `mutation-report` artifact.
+- A full run takes ~25-30 minutes on 2 cores (CI splits it into one job per file); use `npx stryker run --mutate server/soc/parser.ts` for a single file.
+- The run fails if the score drops below `thresholds.break` (combined, in `stryker.config.json`; per-file values in the CI matrix). Raise them when tests improve; never lower them to get green.
+- Reports go to `reports/mutation/` (git-ignored); CI uploads them as `mutation-report-*` artifacts.
 - Equivalent mutants are annotated in source with `// Stryker disable next-line <Mutator>: <reason>`.
 
 ## Notes

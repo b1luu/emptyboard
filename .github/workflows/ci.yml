@@ -43,10 +43,24 @@ jobs:
         run: npm run build
 
   mutation:
-    name: Mutation testing
+    # A full single-job run measured ~29 min locally on 2 cores (limit 25), so each
+    # mutated file runs as its own matrix job. Per-file break = floor(measured score) - 2.
+    name: Mutation testing (${{ matrix.file }})
     needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - file: server/services/time-window.ts
+            break: 96
+          - file: server/services/availability.ts
+            break: 73
+          - file: server/services/schedule-sync.ts
+            break: 73
+          - file: server/soc/parser.ts
+            break: 92
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -61,12 +75,14 @@ jobs:
         run: npm ci
 
       - name: Run mutation tests
-        run: npm run mutation
+        run: |
+          jq '.thresholds.break = ${{ matrix.break }}' stryker.config.json > stryker.ci.json
+          npx stryker run stryker.ci.json --mutate "${{ matrix.file }}"
 
       - name: Upload mutation report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: mutation-report
+          name: mutation-report-${{ strategy.job-index }}
           path: reports/mutation/
           if-no-files-found: ignore
