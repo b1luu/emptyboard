@@ -56,6 +56,7 @@ export function parseScheduleHtml(html: string, term: string, subjectCode: strin
     const section = cellText(4);
 
     // UCSD collapses days/time/building/room into a single colspan="4" TBA cell on arranged sections.
+    // Stryker disable next-line StringLiteral: parseInt("") is NaN and NaN >= 4 is false, exactly like parseInt("1") >= 4
     const daysColspan = Number.parseInt($(cells.get(5)).attr("colspan") ?? "1", 10);
     let days: string;
     let time: string;
@@ -71,6 +72,7 @@ export function parseScheduleHtml(html: string, term: string, subjectCode: strin
       building = "TBA";
       room = "TBA";
       instructor = cellText(6);
+      // Stryker disable next-line ConditionalExpression,EqualityOperator,StringLiteral: this branch is only reached with at least 10 cells (early return above), so the > 7 guard is always true
       available = cells.length > 7 ? cellText(7) : "";
       limit = cells.length > 8 ? cellText(8) : "";
     } else {
@@ -121,6 +123,7 @@ export function parseTotalResultPages(html: string): number {
   const match = html.match(PAGINATION_RE);
   if (!match?.[1]) return 1;
   const parsed = Number.parseInt(match[1], 10);
+  // Stryker disable next-line EqualityOperator: parsed === 1 returns 1 via either branch
   return Number.isSafeInteger(parsed) && parsed >= 1 ? parsed : 1;
 }
 
@@ -131,6 +134,7 @@ export function parseTermsHtml(html: string): TermMeta[] {
   const seen = new Set<string>();
 
   $("select#selectedTerm option").each((_, opt) => {
+    // Stryker disable next-line StringLiteral: cheerio attr('value') on <option> falls back to the option text, so it is never undefined
     const code = normalizeText($(opt).attr("value") ?? "");
     const label = normalizeText($(opt).text());
     if (!code || !label || IGNORED_TERM_CODES.has(code) || seen.has(code)) return;

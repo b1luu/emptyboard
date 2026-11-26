@@ -18,7 +18,9 @@ function clock12hToMinutes(hour: number, minute: number, meridiem: string): numb
 /** Parse SOC time range such as "3:30p-4:50p" or "10:00am-10:50am" into minute bounds. */
 export function parseTimeRange(timeStr: string): Interval | null {
   if (typeof timeStr !== "string") return null;
+  // Stryker disable next-line Regex: /\s/g and /\s+/g give identical results with replace(..., "")
   const compact = timeStr.replace(/\s+/g, "").toLowerCase();
+  // Stryker disable next-line ConditionalExpression,LogicalOperator: empty or "tba" input is rejected by TIME_RANGE_RE right after, so the early return is redundant
   if (!compact || compact.includes("tba")) return null;
 
   const match = compact.match(TIME_RANGE_RE);
@@ -45,7 +47,9 @@ export function parseTimeRange(timeStr: string): Interval | null {
  */
 export function parseDaysColumn(daysStr: string): DayCode[] {
   if (typeof daysStr !== "string") return [];
+  // Stryker disable next-line Regex: /\s/g and /\s+/g give identical results with replace(..., "")
   const compact = daysStr.replace(/\s+/g, "");
+  // Stryker disable next-line ConditionalExpression,LogicalOperator: empty or "tba" input yields [] from the tokenizer loop anyway (loop skipped, or 'B' rejected)
   if (!compact || /tba/i.test(compact)) return [];
 
   const parsed: DayCode[] = [];
@@ -55,6 +59,7 @@ export function parseDaysColumn(daysStr: string): DayCode[] {
     const rest = compact.slice(index);
 
     // Explicitly reject Sunday tokens rather than letting "S" match Saturday.
+    // Stryker disable next-line ConditionalExpression,LogicalOperator,MethodExpression,BlockStatement: Sunday guard is redundant: the tokenizer rejects the 'u' after a lone 'S' with the same [] result
     if (rest.startsWith("Sun") || rest.startsWith("Su")) {
       return [];
     }
@@ -149,6 +154,7 @@ export function formatMinutes(minutes: number): string {
 }
 
 export function parseClockToMin(value: string): number | null {
+  // Stryker disable next-line Regex: /\s/g and /\s+/g give identical results with replace(..., "")
   const compact = value.replace(/\s+/g, "").toLowerCase();
   const match = compact.match(CLOCK_12H_RE);
   if (!match) return null;
@@ -161,6 +167,7 @@ export function parseClockToMin(value: string): number | null {
 
 /** Accepts 24-hour HH:MM ("14:00", "24:00") or 12-hour clock ("2:00p", "2:00 pm"). */
 export function parseClockFlexible(value: string): number | null {
+  // Stryker disable next-line Regex,MethodExpression: /\s/g and /\s+/g give identical results with replace(..., ""); case of the compact string is irrelevant because parseClockToMin lowercases again
   const compact = value.replace(/\s+/g, "").toLowerCase();
   const match24 = compact.match(CLOCK_24H_RE);
   if (match24) {
@@ -191,6 +198,7 @@ export function mergeIntervals(intervals: readonly Interval[]): Interval[] {
   );
   if (!valid.length) return [];
 
+  // Stryker disable next-line ArithmeticOperator: the end-time tiebreak only reorders intervals with equal startMin, and the merge result does not depend on that order
   valid.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
 
   const merged: Interval[] = [];
@@ -199,6 +207,7 @@ export function mergeIntervals(intervals: readonly Interval[]): Interval[] {
   for (let i = 1; i < valid.length; i++) {
     const next = valid[i]!;
     if (next.startMin <= current.endMin) {
+      // Stryker disable next-line EqualityOperator: `>=` would only reassign endMin to the identical value
       if (next.endMin > current.endMin) current.endMin = next.endMin;
     } else {
       merged.push(current);
@@ -228,7 +237,9 @@ export function computeFreeIntervals(
   let cursor = windowStart;
 
   for (const block of busy) {
+    // Stryker disable next-line EqualityOperator: a block ending exactly at windowStart contributes nothing when processed, so `<` vs `<=` is unobservable
     if (block.endMin <= windowStart) continue;
+    // Stryker disable next-line EqualityOperator: a block starting exactly at windowEnd adds a zero-length clamp and no free interval, so `>` vs `>=` is unobservable
     if (block.startMin >= windowEnd) break;
 
     const clampedStart = Math.max(block.startMin, windowStart);
@@ -237,6 +248,7 @@ export function computeFreeIntervals(
     if (cursor < clampedStart) {
       free.push({ startMin: cursor, endMin: clampedStart });
     }
+    // Stryker disable next-line EqualityOperator: `>=` only reassigns the cursor to the identical value
     if (clampedEnd > cursor) {
       cursor = clampedEnd;
     }
@@ -269,8 +281,11 @@ const WEEKDAY_TO_CODE: Record<string, DayCode> = {
 /** Resolve wall-clock weekday and minutes in America/Los_Angeles. Sunday maps to day: null. */
 export function nowPacific(date: Date = new Date()): PacificNow {
   const parts = PACIFIC_FORMATTER.formatToParts(date);
+  // Stryker disable next-line ConditionalExpression,OptionalChaining,StringLiteral: formatToParts always yields the weekday part first and always yields it, so the fallback and optional chaining are unreachable
   const weekdayLabel = parts.find((p) => p.type === "weekday")?.value ?? "Mon";
+  // Stryker disable next-line OptionalChaining,StringLiteral: formatToParts with hour: '2-digit' always yields an hour part, so the fallback is unreachable
   const hour = Number.parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  // Stryker disable next-line OptionalChaining,StringLiteral: formatToParts with minute: '2-digit' always yields a minute part, so the fallback is unreachable
   const minute = Number.parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
   return {
     day: WEEKDAY_TO_CODE[weekdayLabel] ?? null,
