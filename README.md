@@ -170,6 +170,14 @@ npm run bench:synthetic
 | `EMPTYBOARD_TERMS_CACHE_TTL_MS` | `3600000` | TTL for cached `/api/terms` responses (1 hour). |
 | `EMPTYBOARD_DATA_DIR` | `./data` | Directory storing synced `<TERM>.json` schedule caches. |
 
+## Mutation testing
+
+- `npm run mutation` runs [Stryker](https://stryker-mutator.io/) (command runner, `node --import tsx --test`) over the core server logic: `time-window`, `availability`, `schedule-sync`, and the SOC `parser`.
+- A full run takes about 20 minutes on 2 cores; use `npx stryker run --mutate server/soc/parser.ts` for a single file.
+- The run fails if the mutation score drops below `thresholds.break` in `stryker.config.json`; raise it when tests improve, never lower it to get green.
+- Reports are written to `reports/mutation/` (git-ignored); CI uploads them as the `mutation-report` artifact.
+- Equivalent mutants are annotated in source with `// Stryker disable next-line <Mutator>: <reason>`.
+
 ## Notes
 
 - **Sunday** has no UCSD weekday letter code (`M T W R F S`); `free-now` returns `campusDay: false` on Sundays, while `search` accepts any explicit weekday (`Mo`–`Sa`).
